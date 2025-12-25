@@ -54,7 +54,12 @@ self.addEventListener('fetch', (event) => {
         // Handle 404 responses for navigation requests
         if (request.mode === 'navigate' && networkResponse.status === 404) {
           return caches.match('./index.html').then((indexResponse) => {
-            return indexResponse || networkResponse;
+            // If index.html is cached, serve it; otherwise serve the 404
+            if (indexResponse) {
+              return indexResponse;
+            }
+            // Fallback to 404 if cache is unavailable (shouldn't happen with precaching)
+            return networkResponse;
           });
         }
         
@@ -69,7 +74,11 @@ self.addEventListener('fetch', (event) => {
         // Offline fallback
         if (request.mode === 'navigate') {
           return caches.match('./index.html').then((indexResponse) => {
-            return indexResponse || new Response('Offline', { status: 503 });
+            // If index.html is cached, serve it; otherwise serve offline message
+            if (indexResponse) {
+              return indexResponse;
+            }
+            return new Response('Offline', { status: 503 });
           });
         }
         return new Response('Offline', { status: 503 });
