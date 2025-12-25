@@ -51,6 +51,13 @@ self.addEventListener('fetch', (event) => {
       }
       
       return fetch(request).then((networkResponse) => {
+        // Handle 404 responses for navigation requests
+        if (request.mode === 'navigate' && networkResponse.status === 404) {
+          return caches.match('./index.html').then((indexResponse) => {
+            return indexResponse || networkResponse;
+          });
+        }
+        
         if (networkResponse.ok) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -59,8 +66,11 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
+        // Offline fallback
         if (request.mode === 'navigate') {
-          return caches.match('./index.html');
+          return caches.match('./index.html').then((indexResponse) => {
+            return indexResponse || new Response('Offline', { status: 503 });
+          });
         }
         return new Response('Offline', { status: 503 });
       });
